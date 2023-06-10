@@ -1,18 +1,13 @@
 const { buildSchema } = require('graphql')
 
 module.exports = buildSchema(`
-    type TestData {
-        text: String!
-        views: Int!
-    }
-
-    type BelloData {
-        name: Int!
+    type AuthData {
+        token: String!
+        userId: String!
     }
 
     type RootQuery {
-        hello: TestData
-        bello: BelloData
+        login(email: String!, password: String!): AuthData
     }
 
     type Post {
