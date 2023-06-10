@@ -13,6 +13,15 @@ app.use('/graphql', graphqlHTTP({
     schema: graphqlSchema,
     rootValue: graphqlResolver,
     graphiql: true,
+    customFormatErrorFn(err) {
+        if (!err.originalError) {
+            return err
+        }
+        const details = err.originalError.data
+        const message = err.originalError.message
+        const code = err.originalError.code
+        return {message, code, details}
+    }
 }))
 
 async function connectToMongoDB() {
