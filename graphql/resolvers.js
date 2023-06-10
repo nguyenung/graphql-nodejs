@@ -1,10 +1,12 @@
 const User = require('./../models/user')
+const Post = require('./../models/post')
 const bcrypt = require('bcrypt')
 const validator = require('validator')
 const jwt = require('jsonwebtoken')
+const { ObjectId } = require('mongodb')
 
 module.exports = {
-    login: async function ({email, password}) {
+    login: async function ({ email, password }) {
         try {
             const loadedUser = await User.findOne({ email })
             if (!loadedUser) {
@@ -64,5 +66,44 @@ module.exports = {
         })
         const createdUser = await user.save()
         return { ...createdUser._doc, _id: createdUser._id.toString() }
+    },
+
+    createPost: async function ({ postInput }, req) {
+        if (!req.isAuth) {
+            const err = new Error('Not authenticated.')
+            err.code = 401
+            throw err
+        }
+        const { title, content, imageUrl } = postInput
+        const validatorErrors = []
+        if (validator.isEmpty(title) || !validator.isLength(title, { min: 5 })) {
+            validatorErrors.push({ message: 'Title must be at least 5 characters' })
+        }
+        if (validator.isEmpty(content) || !validator.isLength(content, { min: 5 })) {
+            validatorErrors.push({ message: 'Content must be at least 5 characters' })
+        }
+        if (validatorErrors.length > 0) {
+            const validatorErr = new Error('Invalid input data.')
+            validatorErr.code = 422
+            validatorErr.data = validatorErrors
+            throw validatorErr
+        }
+
+        const currentUser = await User.findById(req.userId)
+        if (!currentUser) {
+            const err = new Error('Invalid user.')
+            err.code = 401
+            throw err
+        }
+        const post = new Post({ title, content, imageUrl, creator: currentUser })
+        const newPost = await post.save()
+        currentUser.posts.push(newPost)
+        await currentUser.save()
+        return {
+            ...newPost._doc,
+            _id: newPost._id.toString(),
+            createdAt: newPost.createdAt.toUTCString(),
+            updatedAt: newPost.updatedAt.toUTCString()
+        }
     }
 }
