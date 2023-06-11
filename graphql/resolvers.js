@@ -105,5 +105,34 @@ module.exports = {
             createdAt: newPost.createdAt.toUTCString(),
             updatedAt: newPost.updatedAt.toUTCString()
         }
+    },
+
+    posts: async function ({ page }, req) {
+        if (!req.isAuth) {
+            const err = new Error('Not authenticated.')
+            err.code = 401
+            throw err
+        }
+        
+        const limit = 2 
+        const posts = await Post
+            .find()
+            .sort({ createdAt: -1 })
+            .skip((page -1) * limit)
+            .limit(limit)
+            .populate('creator')
+
+        const totalPosts = await Post.find().countDocuments()
+        return {
+            posts: posts.map(post => {
+                return {
+                    ...post._doc,
+                    _id: post._id.toString(),
+                    createdAt: post.createdAt.toUTCString(),
+                    updatedAt: post.updatedAt.toUTCString()
+                }
+            }),
+            totalPosts: totalPosts
+        }
     }
 }
